@@ -1,0 +1,57 @@
+ovpkg - OverlayFS package installer for OpenWrt-Zipit
+
+This set of scripts allow you to create an overlayfs filesystem image
+on an external hard drive, usb stick or sd card and install openwrt 
+packages to it. The overlayfs is mounted on top of the root filesystem 
+so the packages appear as if they were installed to the root filesystem.
+
+Included scripts and some info about them:
+
+The first script, mkoverlay, is used to create an ext2 disk image file 
+for use with overlayfs. It uses dd to create the image file, partitions 
+it with fdisk, and formats it with mke2fs. The first argument to 
+mkoverlay is the disk image size and the second is the full path and 
+filename where the disk image will reside on your card. To create a 
+128Mb image file, first make sure your card is mounted (probably to 
+/mnt/mmcblk0p1) then run:
+
+	mkoverlay 128 /mnt/mmcblk0p1/myimagefilename.img
+
+When the script is finished you will have a fresh disk image to install
+software to. The mkoverlay script creates /etc/ovpkg.conf with the path
+and filename of your image. If you use the example above it would look
+like this:
+
+	SD_ROOTFS=/mnt/mmcblk0p1/myimagefilename.img
+
+(TODO: automate adding this to opkg.conf)
+There also needs to be some changes to the opkg config file. This will
+tell opkg to install packages in our overlayfs/image file. Add the
+following to /etc/opkg.conf:
+
+	dest card /overlay
+
+Now we are ready to mount the image file with the ovmount script. This
+script doesn't need any arguments, just type 'ovmount' and it does all
+the work. First it creates the image file loop device, then mounts the
+loop device to /overlay, then mounts the dirs in /overlay on top of 
+the root dirs as overlayfs. You can also unmount the overlay with the
+uovmount script.
+
+With the overlay mounted you can proceed using the ovpkg script. Use
+ovpkg in the same way you would use opkg except do not use the -d or
+--dest option. ovpkg sets the destination automatically to the
+card/image file. So, if you want to install supertux to the card you
+would run:
+
+	ovpkg install supertux
+
+This will install the software to /overlay (the image file) and 
+remount the image so that all symbolic links show properly. If you 
+want to install something to the jffs2 partition you can still use
+opkg as normal.
+
+Lastly, there is an eject script that will unmount the overlays, 
+remove the loop device and unmount the card. You should use this if
+you want to remove the card from the Zipit while booted. It's quicker
+than running uovmount and then unmounting the card manually.

@@ -1,0 +1,49 @@
+#!/bin/sh
+
+# Check status to see if we are mounted
+STATUS=`cat /tmp/overlay/status`
+if [ $STATUS -eq 0 ]; then
+	echo "Overlayfs not mounted"
+	echo "Attempting to unmount SD Card(s)"
+	for mount in /mnt/*; do
+		device=`basename $mount | grep -q "mmcblk"`
+		if [ $? -eq 0 ]; then
+			echo "Unmounting $mount"
+			umount ${mount} &>/dev/null
+		fi
+	done
+	exit 1
+fi
+
+# Unmount overlay dirs in rootfs
+for dir in /overlay/*; do
+	if [ -d "${dir}" ]; then
+		CHK_ROOT_DIR=`echo $dir | sed 's/.*\///'`
+		echo "Unmounting overlayfs dir: $CHK_ROOT_DIR"
+		umount /${CHK_ROOT_DIR}
+	fi
+done
+
+# Unmount ext2 image from overlay
+echo "Unmounting /overlay dir"
+umount /overlay
+
+# Destroy ext2 loop device
+LOOPDEV=`cat /tmp/overlay/loopdevice`
+echo "Removing loop device $LOOPDEV"
+losetup -d ${LOOPDEV}
+
+# Write status
+echo 0 > /tmp/overlay/status
+echo "" > /tmp/overlay/loopdevice
+
+# Unmount SD Cards
+echo "Attempting to unmount SD Card(s)"
+for mount in /mnt/*; do
+	device=`basename $mount | grep -q "mmcblk"`
+	if [ $? -eq 0 ]; then
+		echo "Unmounting $mount"
+		umount ${mount} &>/dev/null
+	fi
+done
+

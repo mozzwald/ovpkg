@@ -1,0 +1,54 @@
+#!/bin/sh
+# mkoverlay - Create ext2 disk image to use for ovpkg
+# Thanks: http://wiki.osdev.org/Loopback_Device
+
+echo -e "mkoverlay - Creates ext2 disk image\n\t    for use with ovpkg"
+
+USAGE=0
+# Check is first arg is number only (size)
+if [ -n "$( echo $1 | sed 's/^[+-]//;s/[0-9]//g;s/\.//')" ]; then
+	echo "Invalid size"
+	USAGE=1
+fi
+
+# Check that 2nd arg is a correct path
+DIR=`echo $2 | sed 's/\(.*\)\/.*/\1/'`
+if [ ! -d ${DIR} ]; then
+	echo "Invalid path"
+	USAGE=1
+fi
+
+# Check if file already exists
+if [ -f ${2} ]; then
+	echo "File already exists"
+	USAGE=1
+fi
+
+# if either input arg is not correct, exit
+if [ $USAGE -eq 1 ]; then
+	echo "Usage: mkoverlay <size> <imagefile>
+	size: Size of image file in megabytes (without Mb string)
+	imagefile: full path and filename of image file"
+	exit 1
+fi
+ 
+SIZE=$1
+IMG_FILE=$2
+let CYL=${SIZE}*1000*1024/516096
+
+echo "Creating $SIZE Mb image file at $IMG_FILE"
+dd if=/dev/zero of=${IMG_FILE} bs=516096c count=${CYL} &> /dev/null
+
+echo "Partitioning the image file"
+echo -e -n "o\nn\np\n1\n\n\nw\n" | fdisk -u -C${CYL} -S63 -H16 ${IMG_FILE} &> /dev/null
+
+LOOPDEV=`losetup -f`
+echo "Mounting the image file to $LOOPDEV"
+losetup -o32256 ${LOOPDEV} ${IMG_FILE}
+
+echo "Formatting the image file"
+mke2fs -b1024 ${LOOPDEV} &> /dev/null
+
+losetup -d ${LOOPDEV}
+echo "SD_ROOTFS=$IMG_FILE" > /etc/ovpkg.conf
+echo "Done!"
