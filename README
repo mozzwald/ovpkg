@@ -24,7 +24,6 @@ like this:
 
 	SD_ROOTFS=/mnt/mmcblk0p1/myimagefilename.img
 
-(TODO: automate adding this to opkg.conf)
 There also needs to be some changes to the opkg config file. This will
 tell opkg to install packages in our overlayfs/image file. Add the
 following to /etc/opkg.conf:
