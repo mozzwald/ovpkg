@@ -1,0 +1,5 @@
+#/usr/share/gmenu2x/sections/utilities/eject.gmenu
+title= eject
+icon=skin:icons/sd.png
+exec=/bin/cp
+params=/usr/local/sbin/eject /tmp/eject; /tmp/eject; rm /tmp/eject
