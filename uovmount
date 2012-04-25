@@ -4,7 +4,58 @@
 STATUS=`cat /tmp/overlay/status`
 if [ $STATUS -eq 0 ]; then
 	echo "Overlayfs not mounted"
-	exit 1
+	exit 0
+fi
+
+# Check if any programs are using overlay files
+for dir in /overlay/*; do
+	# Check overlay mount points
+	if [ -d "${dir}" ]; then
+		USINGDIR=`fuser -m ${dir}`
+		if [ $? -eq 0 ]; then
+			for pid in ${USINGDIR}; do
+				if [ -z "$TEXTUSINGFS" ]; then
+					TEXTUSINGFS="`ps | grep "$pid" | grep -v grep | awk '{print $5}'`"
+				else
+					TEXTUSINGFS="$TEXTUSINGFS, `ps | grep "$pid" | grep -v grep | awk '{print $5}'`"
+				fi
+			done
+			PIDUSINGFS="$PIDUSINGFS $USINGDIR"
+		fi
+	fi
+	# Check root mount points
+	CHK_ROOT_DIR=`echo ${dir} | sed 's/.*\//\//'`
+	if [ -d "${CHK_ROOT_DIR}" ]; then
+		USINGDIR=`fuser -m ${CHK_ROOT_DIR}`
+		if [ $? -eq 0 ]; then
+			for pid in ${USINGDIR}; do
+				if [ -z "$TEXTUSINGFS" ]; then
+					TEXTUSINGFS="`ps | grep "$pid" | grep -v grep | awk '{print $5}'`"
+				else
+					TEXTUSINGFS="$TEXTUSINGFS, `ps | grep "$pid" | grep -v grep | awk '{print $5}'`"
+				fi
+			done
+			PIDUSINGFS="$PIDUSINGFS $USINGDIR"
+		fi
+	fi
+done
+if [ -n "$PIDUSINGFS" ]; then
+	echo "The following programs are using overlayfs:"
+	echo "$TEXTUSINGFS"
+	read -p "Ok to kill these programs? (Y/n): " CHOICE
+	if [ "$CHOICE" == "Y" ] || [ "$CHOICE" == "y" ]; then
+		echo "Killing all programs using overlayfs..."
+		kill -9 ${PIDUSINGFS}
+		if [ $? -ne 0 ]; then
+			echo "Problem killing programs, exiting..."
+			sleep 2
+			exit 1
+		fi
+	else
+		echo "OverlayFS STILL mounted, exiting..."
+		sleep 2
+		exit 1
+	fi
 fi
 
 # Unmount overlay dirs in rootfs
@@ -28,3 +79,4 @@ losetup -d ${LOOPDEV}
 # Write status
 echo 0 > /tmp/overlay/status
 echo "" > /tmp/overlay/loopdevice
+exit 0

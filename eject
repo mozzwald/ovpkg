@@ -1,49 +1,59 @@
 #!/bin/sh
+#unmount the overlayfs
+uovmount
 
-# Check status to see if we are mounted
-STATUS=`cat /tmp/overlay/status`
-if [ $STATUS -eq 0 ]; then
-	echo "Overlayfs not mounted"
-	echo "Attempting to unmount SD Card(s)"
-	for mount in /mnt/*; do
-		device=`basename $mount | grep -q "mmcblk"`
-		if [ $? -eq 0 ]; then
-			echo "Unmounting $mount"
-			umount ${mount} &>/dev/null
-		fi
-	done
+# if uovmount failed, exit
+if [ $? -ne 0 ]; then
 	exit 1
+	read -p "Press enter to exit"
 fi
 
-# Unmount overlay dirs in rootfs
-for dir in /overlay/*; do
-	if [ -d "${dir}" ]; then
-		CHK_ROOT_DIR=`echo $dir | sed 's/.*\///'`
-		echo "Unmounting overlayfs dir: $CHK_ROOT_DIR"
-		umount /${CHK_ROOT_DIR}
+# Check if any processes are using the mount devices
+PIDUSINGFS=
+for mount in /mnt/*; do
+	if [ -d "${mount}" ]; then
+	USINGDIR=`fuser -m ${mount}`
+	if [ $? -eq 0 ]; then
+		for pid in ${USINGDIR}; do
+			if [ -z "$TEXTUSINGFS" ]; then
+				TEXTUSINGFS="`ps | grep "$pid" | grep -v grep | awk '{print $5}'`"
+			else
+				TEXTUSINGFS="$TEXTUSINGFS, `ps | grep "$pid" | grep -v grep | awk '{print $5}'`"
+			fi
+		done
+		PIDUSINGFS="$PIDUSINGFS $USINGDIR"
+	fi
 	fi
 done
-
-# Unmount ext2 image from overlay
-echo "Unmounting /overlay dir"
-umount /overlay
-
-# Destroy ext2 loop device
-LOOPDEV=`cat /tmp/overlay/loopdevice`
-echo "Removing loop device $LOOPDEV"
-losetup -d ${LOOPDEV}
-
-# Write status
-echo 0 > /tmp/overlay/status
-echo "" > /tmp/overlay/loopdevice
+if [ -n "$PIDUSINGFS" ]; then
+	echo "The following programs are using mount points:"
+	echo "$TEXTUSINGFS"
+	read -p "Ok to kill these programs? (Y/n): " CHOICE
+	if [ "$CHOICE" == "N" ] || [ "$CHOICE" == "n" ]; then
+		echo "Mount points STILL mounted, exiting..."
+		sleep 4
+		exit 1
+	else
+		echo "Killing all programs using the mount points..."
+		kill -9 ${PIDUSINGFS}
+		if [ $? -ne 0 ]; then
+			echo "Problem killing programs, exiting..."
+			sleep 4
+			exit 1
+		fi
+	fi
+fi
 
 # Unmount SD Cards
-echo "Attempting to unmount SD Card(s)"
+echo "Attempting to unmount mount points..."
 for mount in /mnt/*; do
-	device=`basename $mount | grep -q "mmcblk"`
+	echo "Unmounting $mount"
+	umount ${mount} &>/dev/null
 	if [ $? -eq 0 ]; then
-		echo "Unmounting $mount"
-		umount ${mount} &>/dev/null
+		rmdir ${mount}
 	fi
 done
+
+echo "Finished. Press enter to continue"
+read
 
