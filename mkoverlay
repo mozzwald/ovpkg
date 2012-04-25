@@ -54,7 +54,7 @@ echo "Adding image file path to /etc/ovpkg.conf"
 echo "SD_ROOTFS=$IMG_FILE" > /etc/ovpkg.conf
 
 grep -q 'dest card' /etc/opkg.conf
-if [ $? == 1 ]; then
+if [ $? -eq 1 ]; then
 	echo "Adding install destination to /etc/opkg.conf"
 	echo "dest card /overlay" >> /etc/opkg.conf
 fi
