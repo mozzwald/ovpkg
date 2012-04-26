@@ -11,7 +11,9 @@ fi
 # Check if any processes are using the mount devices
 PIDUSINGFS=
 for mount in /mnt/*; do
-	if [ -d "${mount}" ]; then
+	if [ `stat -fc%t:%T "${mount}"` != `stat -fc%t:%T "${mount}/.."` ]; then
+#		echo "$dir is mounted"
+
 	USINGDIR=`fuser -m ${mount}`
 	if [ $? -eq 0 ]; then
 		for pid in ${USINGDIR}; do
