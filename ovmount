@@ -19,17 +19,15 @@ if [ $STATUS -eq 1 ]; then
 	exit 1
 fi
 
+for rootfs in $SD_ROOTFS; do
+
 # Setup loop device
-if [ -f "/${SD_ROOTFS}" ]; then
+	if [ -f "/$rootfs" ]; then
 	LOOPDEV=`losetup -f`
 	echo "Creating ext2 loop device $LOOPDEV"
-	losetup -o32256 ${LOOPDEV} ${SD_ROOTFS}
+		losetup -o32256 ${LOOPDEV} $rootfs
 	echo "Checking loop device for errors"
 	e2fsck -y ${LOOPDEV}
-else
-	echo "SD Card rootfs not found"
-	exit 1
-fi
 
 mount -t ext2 ${LOOPDEV} /overlay
 
@@ -49,3 +47,10 @@ done
 # Write status
 echo 1 > /tmp/overlay/status
 echo "$LOOPDEV" > /tmp/overlay/loopdevice
+		exit 0
+	fi
+done
+
+
+echo "SD Card rootfs not found"
+exit 1
