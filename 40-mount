@@ -26,7 +26,7 @@ if [ `basename $blkdev` != "block" ]; then
 		local use_device
 		local do_fsck=0
 		local fsck_type
-		
+
 		local autoswap_from_fstab
 		local automount_from_fstab
 
@@ -61,36 +61,34 @@ if [ `basename $blkdev` != "block" ]; then
 		[ -z "$use_device" ] && {
 			config_get_autoswap
 			autoswap_from_fstab="$from_fstab"
-		
+
 			[ "$autoswap_from_fstab" -eq 1 ] && {
 				config_get_swap_section_by_device "/dev/$device"
 				use_device="$sds_swap_device"
 			}
 		}
-		
+
 		grep -q "/dev/$device" /proc/swaps || grep -q "/dev/$device" /proc/mounts || {
 			[ "$anon_mount" -eq 1 ] && [ -z "$use_device" ] && {
 				( mkdir -p /mnt/$device && mount /dev/$device /mnt/$device ) 2>&1 | tee /proc/self/fd/2 | logger -t 'fstab'
 			}
 		}
-		mmctest=`grep -q "$device" /etc/ovpkg.conf`
+		ovpkgtest=`grep -q "$device" /etc/ovpkg.conf`
 		if [ $? -eq 0 ]; then
 			#echo "Attempting to mount ovpkg overlay"
 			. /etc/ovpkg.conf
-			if [ -e ${SD_ROOTFS} ]; then
-				/usr/local/sbin/ovmount >/dev/ttyS2
-			fi
+			/usr/local/sbin/ovmount
 		fi
 		reset_dev_section_cb
 		;;
 	remove)
-        mmctest=`grep -q "$device" /etc/ovpkg.conf`
-        if [ $? -eq 0 ]; then
+        	ovpkgtest=`grep -q "$device" /etc/ovpkg.conf`
+        	if [ $? -eq 0 ]; then
 			/usr/local/sbin/uovmount
 		fi
  		umount /dev/$device
 		;;
-    esac	
+    esac
 
 fi
 
