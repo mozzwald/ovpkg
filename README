@@ -1,5 +1,19 @@
 ovpkg - OverlayFS package installer for OpenWrt-Zipit
 
+TESTING (ldconfig): Replace ovpkg, ovmount and uovmount with the new
+versions in this branch. You will need to install the ldconfig package
+from the OpenWrt repo. Also, you need to edit the PATH variable in
+/etc/profile and add:
+
+:/overlay/bin:/overlay/sbin:/overlay/usr/bin:/overlay/usr/sbin
+
+Also, add the following to /etc/ld.so.conf:
+
+/overlay/lib
+/overlay/usr/lib
+
+------------------------------- Old -------------------------------------
+
 This set of scripts allow you to create an overlayfs filesystem image
 on an external hard drive, usb stick or sd card and install openwrt 
 packages to it. The overlayfs is mounted on top of the root filesystem 
