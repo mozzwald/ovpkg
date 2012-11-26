@@ -1,4 +1,4 @@
-#!/bin/ash
+#!/bin/sh
 
 # include ovpkg config file
 . /etc/ovpkg.conf
@@ -13,48 +13,15 @@ if [ ! -f /tmp/overlay/status ]; then
 	echo 0 > /tmp/overlay/status
 fi
 
-# Unmount overlay dirs in rootfs if needed
+# Make sure overlay is mounted before installing
 STATUS=`cat /tmp/overlay/status`
-if [ $STATUS -eq 1 ]; then
-	for dir in /overlay/*; do
-		if [ -d "${dir}" ]; then
-			CHK_ROOT_DIR=`echo $dir | sed 's/.*\///'`
-			echo "Unmounting overlayfs dir: $CHK_ROOT_DIR"
-			umount /${CHK_ROOT_DIR}
-		fi
-	done
-else
-	# Setup loop device so we can install the packages
-	if [ -f "${SD_ROOTFS}" ]; then
-		LOOPDEV=`losetup -f`
-		echo "Creating ext2 loop device $LOOPDEV"
-		losetup -o32256 ${LOOPDEV} ${SD_ROOTFS}
-		echo "Checking loop device for errors"
-		e2fsck -y ${LOOPDEV}
-	else
-		echo "SD Card rootfs not found"
-		exit 1
-	fi
-	mount -t ext2 ${LOOPDEV} /overlay
-	echo "$LOOPDEV" > /tmp/overlay/loopdevice
+if [ $STATUS -ne 1 ]; then
+	echo "Overlay not mounted, Exiting."
+	exit 1
 fi
 
 # install packages
 opkg -d card $@
 
-# Mount all dirs in overlay to rootfs
-for dir in /overlay/*; do
-	CHK_ROOT_DIR=`echo $dir | sed 's/.*\///'`
-	if [ "$CHK_ROOT_DIR" != "*" ]; then
-		# Make dir in rootfs if it does not exist
-		if [ ! -d "/${CHK_ROOT_DIR}" ]; then
-			mkdir "/${CHK_ROOT_DIR}"
-		fi
-		echo "Mounting overlay dir to rootfs: $CHK_ROOT_DIR"
-		mount -t overlayfs -o rw,noatime,lowerdir=${dir},upperdir=/${CHK_ROOT_DIR} ${dir} /${CHK_ROOT_DIR}
-	fi
-done
-
-# Write mounted status
-echo 1 > /tmp/overlay/status
-
+# Run ldconfig
+ldconfig 2>/dev/null

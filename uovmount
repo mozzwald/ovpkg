@@ -11,34 +11,39 @@ fi
 for dir in /overlay/*; do
 	# Check overlay mount points
 	if [ -d "${dir}" ]; then
-		USINGDIR=`fuser -m ${dir}`
-		if [ $? -eq 0 ]; then
-			for pid in ${USINGDIR}; do
-				if [ -z "$TEXTUSINGFS" ]; then
-					TEXTUSINGFS="`ps | grep "$pid" | grep -v grep | awk '{print $5}'`"
-				else
-					TEXTUSINGFS="$TEXTUSINGFS, `ps | grep "$pid" | grep -v grep | awk '{print $5}'`"
-				fi
-			done
-			PIDUSINGFS="$PIDUSINGFS $USINGDIR"
+		if [ `stat -fc%t:%T "${dir}"` != `stat -fc%t:%T "${dir}/.."` ]; then
+			USINGDIR=`fuser -m ${dir}`
+			if [ $? -eq 0 ]; then
+				for pid in ${USINGDIR}; do
+					if [ -z "$TEXTUSINGFS" ]; then
+						TEXTUSINGFS="`ps | grep "$pid" | grep -v grep | awk '{print $5}'`"
+					else
+						TEXTUSINGFS="$TEXTUSINGFS, `ps | grep "$pid" | grep -v grep | awk '{print $5}'`"
+					fi
+				done
+				PIDUSINGFS="$PIDUSINGFS $USINGDIR"
+			fi
 		fi
 	fi
 	# Check root mount points
 	CHK_ROOT_DIR=`echo ${dir} | sed 's/.*\//\//'`
 	if [ -d "${CHK_ROOT_DIR}" ]; then
-		USINGDIR=`fuser -m ${CHK_ROOT_DIR}`
-		if [ $? -eq 0 ]; then
-			for pid in ${USINGDIR}; do
-				if [ -z "$TEXTUSINGFS" ]; then
-					TEXTUSINGFS="`ps | grep "$pid" | grep -v grep | awk '{print $5}'`"
-				else
-					TEXTUSINGFS="$TEXTUSINGFS, `ps | grep "$pid" | grep -v grep | awk '{print $5}'`"
-				fi
-			done
-			PIDUSINGFS="$PIDUSINGFS $USINGDIR"
+		if [ `stat -fc%t:%T "${CHK_ROOT_DIR}"` != `stat -fc%t:%T "${CHK_ROOT_DIR}/.."` ]; then
+			USINGDIR=`fuser -m ${CHK_ROOT_DIR}`
+			if [ $? -eq 0 ]; then
+				for pid in ${USINGDIR}; do
+					if [ -z "$TEXTUSINGFS" ]; then
+						TEXTUSINGFS="`ps | grep "$pid" | grep -v grep | awk '{print $5}'`"
+					else
+						TEXTUSINGFS="$TEXTUSINGFS, `ps | grep "$pid" | grep -v grep | awk '{print $5}'`"
+					fi
+				done
+				PIDUSINGFS="$PIDUSINGFS $USINGDIR"
+			fi
 		fi
 	fi
 done
+
 if [ -n "$PIDUSINGFS" ]; then
 	echo "The following programs are using overlayfs:"
 	echo "$TEXTUSINGFS"
@@ -57,15 +62,6 @@ if [ -n "$PIDUSINGFS" ]; then
 		exit 1
 	fi
 fi
-
-# Unmount overlay dirs in rootfs
-for dir in /overlay/*; do
-	if [ -d "${dir}" ]; then
-		CHK_ROOT_DIR=`echo $dir | sed 's/.*\///'`
-		echo "Unmounting overlayfs dir: $CHK_ROOT_DIR"
-		umount /${CHK_ROOT_DIR}
-	fi
-done
 
 # Unmount ext2 image from overlay
 echo "Unmounting /overlay dir"

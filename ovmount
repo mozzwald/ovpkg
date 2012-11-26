@@ -21,36 +21,25 @@ fi
 
 for rootfs in $SD_ROOTFS; do
 
-# Setup loop device
+	# Setup loop device
 	if [ -f "/$rootfs" ]; then
-	LOOPDEV=`losetup -f`
-	echo "Creating ext2 loop device $LOOPDEV"
+		LOOPDEV=`losetup -f`
+		echo "Creating ext2 loop device $LOOPDEV"
 		losetup -o32256 ${LOOPDEV} $rootfs
-	echo "Checking loop device for errors"
-	e2fsck -y ${LOOPDEV}
+		echo "Checking loop device for errors"
+		e2fsck -y ${LOOPDEV}
 
-mount -t ext2 ${LOOPDEV} /overlay
+		mount -t ext2 ${LOOPDEV} /overlay
 
-# Mount all dirs in overlay to rootfs
-for dir in /overlay/*; do
-	CHK_ROOT_DIR=`echo $dir | sed 's/.*\///'`
-	if [ "$CHK_ROOT_DIR" != "*" ]; then
-		# Make dir in rootfs if it does not exist
-		if [ ! -d "/${CHK_ROOT_DIR}" ]; then
-			mkdir "/${CHK_ROOT_DIR}"
-		fi
-		echo "Mounting overlay dir to rootfs: $CHK_ROOT_DIR"
-		mount -t overlayfs -o rw,noatime,lowerdir=${dir},upperdir=/${CHK_ROOT_DIR} ${dir} /${CHK_ROOT_DIR}
-	fi
-done
+		# Write status
+		echo 1 > /tmp/overlay/status
+		echo "$LOOPDEV" > /tmp/overlay/loopdevice
 
-# Write status
-echo 1 > /tmp/overlay/status
-echo "$LOOPDEV" > /tmp/overlay/loopdevice
+		# Run ldconfig
+		ldconfig 2>/dev/null
 		exit 0
 	fi
 done
-
-
+	
 echo "SD Card rootfs not found"
 exit 1
