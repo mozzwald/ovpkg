@@ -1,0 +1,42 @@
+#!/bin/sh
+# Create overlay launcher files for gmenu2x
+
+echo "Creating overlay launchers for gmenu2x"
+gmenudir="/root/.gmenu2x"
+
+for dir in /overlay/usr/share/gmenu2x/sections/*; do
+	section=`echo $dir | sed 's/.*sections\///'`\
+	mkdir -p "$gmenudir/sections/$section"
+	for file in $dir/*; do
+		filename=`basename $file`
+		launcherfile="$gmenudir/sections/$section/$filename"
+
+		# Test if launcher already exists in rootfs and skip if true
+		if [ ! -f "$gmenudir/sections/$section/$filename" ]; then
+			# Create empty launcher file in rootfs
+			echo -n "" > $launcherfile
+
+			# Parse launcher file
+			while read line; do
+				echo $line | grep -q "icon="
+				icontest=$?
+				echo "$line" | grep -q "exec="
+				exectest=$?
+				if [ $icontest -eq 0 ]; then
+					# Modify icon path
+					newline=`echo $line | sed 's/skin:/\/overlay\/usr\/share\/gmenu2x\/skins\/Default\//'`
+					echo $newline >> $launcherfile
+				elif [ $exectest -eq 0 ]; then
+					# Modify bin path
+					newline=`echo $line | sed 's/exec=/exec=\/overlay/'`
+					echo $newline >> $launcherfile
+				else
+					# no need to edit other lines
+					echo $line >> $launcherfile
+				fi
+			done < $file
+		else
+			echo "Skipping $filename launcher (exists)"
+		fi
+	done
+done

@@ -25,3 +25,6 @@ opkg -d card $@
 
 # Run ldconfig
 ldconfig 2>/dev/null
+
+# Create gmenu2x launchers
+ovlaunchers
