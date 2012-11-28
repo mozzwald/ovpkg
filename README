@@ -12,7 +12,11 @@ Also, add the following to /etc/ld.so.conf:
 /overlay/lib
 /overlay/usr/lib
 
-------------------------------- Old -------------------------------------
+New "ovlaunchers" script creates gmenu2x launcher files in /root/.gmenu2x
+so that icons show in gmenu2x. It only creates launchers if they exist in
+the overlay filesystem at /overlay/usr/share/gmenu2x/sections/*
+
+--------------------- Old but pertinent info -------------------------
 
 This set of scripts allow you to create an overlayfs filesystem image
 on an external hard drive, usb stick or sd card and install openwrt 
